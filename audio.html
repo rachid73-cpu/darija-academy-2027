@@ -1,1 +1,105 @@
+ <script>
+const arabic = {
+'Assalamou 3alaykoum':'السلام عليكم',
+'Wa 3alaykoum assalam':'وعليكم السلام',
+'Labas ?':'لاباس',
+'Labas, l7amdoullah':'لاباس الحمد لله',
+'Smiti Sara':'سميتي سارة',
+'Chnou smitk ?':'شنو سميتك',
+'W nta ?':'ونتا',
+'W nti ?':'ونتي',
+'Smiti Youssef':'سميتي يوسف',
+'Mnine nta ?':'منين نتا',
+'Mnine nti ?':'منين نتي',
+'Ana mn Fransa':'أنا من فرنسا',
+'Ana mn lmaghrib':'أنا من المغرب',
+'Mtcherrfin':'متشرفين',
+'Choukran':'شكرا',
+'Bslama':'بسلامة',
+'Nchoufek mn b3d':'نشوفك من بعد'
+};
+
+function speak(word) {
+  if (!window.speechSynthesis) {
+    alert('Audio non disponible');
+    return;
+  }
+  speechSynthesis.cancel();
+  const msg = new SpeechSynthesisUtterance(
+    arabic[word] || word
+  );
+  msg.lang = 'ar-MA';
+  msg.rate = 0.75;
+  const voices = speechSynthesis.getVoices();
+  const voice = voices.find(v => v.lang === 'ar-MA')
+    || voices.find(v => v.lang.startsWith('ar'));
+  if (voice) msg.voice = voice;
+  speechSynthesis.speak(msg);
+}
+
+function normalizeArabic(s) {
+  return s.replace(/[\u064B-\u065F]/g,'')
+    .replace(/[أإآ]/g,'ا')
+    .replace(/[^\u0621-\u064A]/g,'');
+}
+
+function microphone(word, result) {
+  const SR = window.SpeechRecognition
+    || window.webkitSpeechRecognition;
+  if (!SR) {
+    result.textContent =
+      'Micro non compatible. Essayez Chrome.';
+    return;
+  }
+  const rec = new SR();
+  rec.lang = 'ar-MA';
+  rec.maxAlternatives = 5;
+  rec.onresult = e => {
+    const answers = Array.from(e.results[0]);
+    const correct = answers.some(x =>
+      normalizeArabic(x.transcript) ===
+      normalizeArabic(arabic[word] || word)
+    );
+    result.textContent = correct
+      ? 'Bravo ! Expression reconnue.'
+      : 'Reconnu : ' + answers[0].transcript
+        + ' — Réessayez : ' + word;
+  };
+  rec.onerror = () => {
+    result.textContent =
+      'Vérifiez la permission du microphone.';
+  };
+  rec.onend = () => {
+    if(result.textContent === 'Parlez maintenant…')
+      result.textContent = 'Réessayez.';
+  };
+  result.textContent = 'Parlez maintenant…';
+  try { rec.start(); }
+  catch(e) {
+    result.textContent = 'Micro indisponible.';
+  }
+}
+
+function audioButtons(word, parent) {
+  b('🔊 Écouter', () => speak(word), true, parent);
+  const result = el('p', '', '', parent);
+  b('🎙️ Parler et vérifier',
+    () => microphone(word, result), true, parent);
+}
+
+const originalRender = render;
+render = function() {
+  originalRender();
+  if (screen === 'learn') {
+    audioButtons(L[u].w[k][0], V);
+  }
+  if (screen === 'dialog') {
+    V.querySelectorAll('.bubble').forEach(x => {
+      const word = x.querySelector('strong').textContent;
+      b('🔊 Écouter', () => speak(word), true, x);
+    });
+  }
+};
+render();
+</script>
 
