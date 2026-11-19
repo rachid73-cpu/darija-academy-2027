@@ -1,1 +1,105 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Darija Academy - Audio</title>
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #faf5eb;
+  padding: 20px;
+  color: #205344;
+}
+button, a {
+  display: block;
+  margin: 15px auto;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  color: white;
+  background: #205344;
+  text-decoration: none;
+}
+#record { background: #dc2626; }
+button:disabled { opacity: 0.5; }
+audio { width: 100%; }
+</style>
+</head>
+<body>
+
+<h1>Darija Academy 2027</h1>
+<h2>Studio d'enregistrement</h2>
+
+<button id="record">🔴 Enregistrer</button>
+<button id="stop" disabled>⏹ Arrêter</button>
+
+<p id="status">Prêt à enregistrer</p>
+
+<audio id="audio" controls></audio>
+<a id="save" hidden>Télécharger ma voix</a>
+
+<script>
+let recorder, stream, chunks = [];
+let url;
+const record = document.getElementById("record");
+const stop = document.getElementById("stop");
+const status = document.getElementById("status");
+const audio = document.getElementById("audio");
+const save = document.getElementById("save");
+
+save.style.display = "none";
+
+record.onclick = async () => {
+  try {
+    stream = await navigator.mediaDevices
+      .getUserMedia({audio: true});
+
+    chunks = [];
+    recorder = new MediaRecorder(stream);
+
+    recorder.ondataavailable = e => {
+      if (e.data.size) chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const type = recorder.mimeType;
+      const blob = new Blob(chunks, {type});
+      if (url) URL.revokeObjectURL(url);
+      url = URL.createObjectURL(blob);
+
+      audio.src = url;
+      save.href = url;
+      save.download = "darija." +
+        (type.includes("mp4") ? "m4a" :
+         type.includes("ogg") ? "ogg" : "webm");
+
+      save.hidden = false;
+      save.style.display = "block";
+      stream.getTracks().forEach(t => t.stop());
+      status.textContent = "Enregistrement terminé";
+      record.disabled = false;
+    };
+
+    recorder.start();
+    record.disabled = true;
+    stop.disabled = false;
+    status.textContent = "🔴 Enregistrement en cours...";
+  } catch (e) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    status.textContent = "Vérifiez l'autorisation du micro.";
+  }
+};
+
+stop.onclick = () => {
+  recorder.stop();
+  stop.disabled = true;
+};
+</script>
+
+</body>
+</html>
+
